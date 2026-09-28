@@ -2,6 +2,11 @@
 
 在桃園市地圖上選一個地點，看周邊 500 公尺走路生活圈的歷史交通事故風險。
 
+> 本 repo 是我在團隊版本定案後維護的個人延伸版本；原始團隊專案請見
+> [lee851104/life_house](https://github.com/lee851104/life_house)。
+
+**競賽 Demo 影片：** <https://youtu.be/3uHAfHad2d0>
+
 **線上 Demo：** <https://p215-2203-nb01.tail177cc6.ts.net> — 每日 08:00–20:00（台北時間）
 
 > 展示服務跑在一台每晚斷電的實體機器上，時段外連線失敗是預期行為，不是服務故障。
@@ -28,6 +33,18 @@ https://github.com/user-attachments/assets/a27441d5-9210-4edc-8b5a-41411687d1a7
 
 > 分數是桃園市同類地區之間的相對百分位，**不是官方安全評等**，不能用來預測未來事故，
 > 也不構成不動產或保險決策建議。詳見 [MODEL_CARD.md](MODEL_CARD.md)。
+
+### 競賽成果與我的貢獻
+
+本專案進入 160 組參賽隊伍中的前 10 強。
+
+我在團隊版本中負責地點 A／B 比較、分享連結與本地收藏、FastAPI／前端調整，以及
+Playwright E2E、CI 與測試資料下載流程；程式變更可見
+[PR #3](https://github.com/lee851104/life_house/pull/3)。
+
+影片製作分工：我製作前段 AI 影像並負責成片重新剪輯；後段 AI 影像由組員使用 Claude 生成。
+
+
 
 ### 資料概況
 
