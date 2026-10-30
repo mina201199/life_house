@@ -38,9 +38,23 @@ https://github.com/user-attachments/assets/a27441d5-9210-4edc-8b5a-41411687d1a7
 
 本專案進入 160 組參賽隊伍中的前 10 強。
 
-我在團隊版本中負責地點 A／B 比較、分享連結與本地收藏、FastAPI／前端調整，以及
-Playwright E2E、CI 與測試資料下載流程；程式變更可見
-[PR #3](https://github.com/lee851104/life_house/pull/3)。
+我在團隊版本中的程式貢獻都在 upstream 的
+[lee851104/life_house PR #3](https://github.com/lee851104/life_house/pull/3)
+「新增兩地比較、分享收藏、評分說明與完整流程測試」（2026-09-04 合併；6 個 commit 中有 4 個由我提交，
+另 2 個是 lee851104 調整資料包下載連結）：
+
+- **地點 A／B 比較與評分說明**：設定、命名、替換兩個地點，並排顯示安全百分位、行人事故、夜間占比與資料充足度；
+  分數卡可展開查看比較對象與計算方式（`src/serving/static/comparison.js`、`src/serving/static/index.html`）。
+- **分享連結與本地收藏**：網址保留座標、名稱與時段，開啟後重新分析；瀏覽器本機收藏最多 20 筆
+  （`src/serving/static/places.js`）。
+- **路口統計修正**：`src/serving/api.py` 新增 `intersection_details`，用完整事故資料計算路口統計，
+  不再被明細查詢的 400 筆上限截斷。
+- **測試與 CI**：Playwright E2E（`tests/e2e/workflow.spec.cjs`）、Node 測試（`tests/test_comparison.cjs`、
+  `tests/test_places.cjs`）、路口統計的 API 測試（`tests/test_walk_only_api.py`）、CI 擴充，以及下載並驗證測試資料包的
+  `scripts/fetch_test_data.py`。
+
+風險模型（`src/models/核心.py`、`src/features/risk.py`、`src/models/建立基準.py`）與資料管線（`src/data/`）
+由組員 lee851104、chenliyu0410 負責，不是我的工作。
 
 影片製作分工：我製作前段 AI 影像並負責成片重新剪輯；後段 AI 影像由組員使用 Claude 生成。
 
@@ -108,12 +122,13 @@ Playwright 會在 8010 埠啟動真正的 FastAPI，使用 v1.0.0 資料包（�
 使用不同母體；大型車與夜間指標只呈現實際件數、占比，不再換算成額外安全分數。
 
 建置產物（索引、路網、基準、地名共約 153 MB）**不進版控**，改以
-[GitHub Release](../../releases/latest) 提供，打包成單一 ZIP（壓縮後 71 MB）。
+原始團隊 repo 的 [GitHub Release v1.0.0](https://github.com/lee851104/life_house/releases/tag/v1.0.0) 提供，
+打包成單一 ZIP（壓縮後 71 MB）；本 fork 沒有另外發布 Release。
 所以有兩條路：下載現成產物（數分鐘），或從政府開放資料自行重建（約一小時）。
 
 ### 路徑 A：下載建置產物（最快）
 
-1. 到 [Releases](../../releases/latest) 下載 `lifehouse-data-v1.0.0.zip`，解壓後把裡面
+1. 到 upstream 的 [Release v1.0.0](https://github.com/lee851104/life_house/releases/tag/v1.0.0) 下載 `lifehouse-data-v1.0.0.zip`，解壓後把裡面
    5 個檔案全部放進專案根目錄（與 `啟動.bat` 同一層）。
 2. 建立環境：
 
@@ -310,7 +325,7 @@ K(d) = 1 - (d / 500m)²          Epanechnikov 距離核
 
 ### 4.7 可重建、可測試
 
-從下載到基準全程腳本化，資料更新後可完整重建。29 個測試涵蓋風險基本運算、行人與平交道判準、
+從下載到基準全程腳本化，資料更新後可完整重建。34 個 Python 測試涵蓋風險基本運算、行人與平交道判準、
 API 參數契約，以及一個**防未來資料洩漏**的時間切分測試（`tests/test_no_leakage.py`）。
 
 風險公式只有 [src/features/risk.py](src/features/risk.py) 一份，查詢、基準與建庫都呼叫它，
@@ -323,7 +338,7 @@ $ uv run ruff check .
 All checks passed!
 
 $ uv run pytest
-29 passed
+34 passed
 ```
 
 <details>
