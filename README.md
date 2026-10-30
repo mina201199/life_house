@@ -1,246 +1,40 @@
 # Life House 安居指數
 
-在桃園市地圖上選一個地點，看周邊 500 公尺走路生活圈的歷史交通事故風險。
+> 在桃園市地圖上選一個地點，看周邊 500 公尺走路生活圈的歷史行人事故風險：事故集中路口、經曝險校正的相對安全百分位、風險構成與每月趨勢。
 
-> 本 repo 是我在團隊版本定案後維護的個人延伸版本；原始團隊專案請見
-> [lee851104/life_house](https://github.com/lee851104/life_house)。
+> **這是團隊專案的個人延伸版本（fork）。** 原始團隊專案為 [lee851104/life_house](https://github.com/lee851104/life_house)；風險模型與資料管線由組員完成，我的貢獻範圍見下方「[我負責的部分](#我負責的部分)」。
 
-**競賽 Demo 影片：** <https://youtu.be/3uHAfHad2d0>
-
-**線上 Demo：** <https://p215-2203-nb01.tail177cc6.ts.net> — 每日 08:00–20:00（台北時間）
-
-> 展示服務跑在一台每晚斷電的實體機器上，時段外連線失敗是預期行為，不是服務故障。
-> 想隨時查看請改用本機執行，見 [2. 快速開始](#2-快速開始)。
-
----
-
-## 1. 這是什麼
+## 要解決的問題
 
 找房時查得到價格、格局和通勤時間，卻很難知道住家周邊步行範圍過去是不是事故熱點。
 
-原始資料是公開的，但不好用：政府資料開放平臺的 A1／A2 事故 CSV 有 51 欄、數百萬列，
-**每一列是一名當事人而不是一件事故**，直接 count 會嚴重高估，檔尾還夾著非資料的註記列。
-而且就算算出「附近有 N 件事故」也沒有意義——市區路多人多，事故自然多；山區路少，看起來永遠安全。
+原始資料是公開的，但不好用：政府資料開放平臺的 A1／A2 事故 CSV 有 51 欄、數百萬列，**每一列是一名當事人而不是一件事故**，直接 count 會嚴重高估，檔尾還夾著非資料的註記列。而且「附近有 N 件事故」本身沒有意義——市區路多人多，事故自然多；山區路少，看起來永遠安全。所以分數必須經過曝險校正，並和同類地區比較。
 
-Life House 把這些資料轉成走路生活圈分析：在選定位置的 500 公尺範圍內，顯示事故集中路口、
-**經曝險校正的相對安全百分位**、風險構成與每月趨勢，並可依時段（上班、下班、深夜）篩選。
+## Demo
 
-https://github.com/user-attachments/assets/a27441d5-9210-4edc-8b5a-41411687d1a7
+- **競賽 Demo 影片**：<https://youtu.be/3uHAfHad2d0>
+- **操作演示影片**：<https://github.com/user-attachments/assets/a27441d5-9210-4edc-8b5a-41411687d1a7>
+- **線上 Demo**：<https://p215-2203-nb01.tail177cc6.ts.net>（跑在一台每晚斷電的實體機器上，預定每日 08:00–20:00 台北時間開放；2026-10-30 18:13 確認時無法連線，請以本機執行為準）
 
-操作演示：搜尋地點後，左側是 500 公尺生活圈，底色為每 200m 一格的局部安全百分位，
-圓圈數字是該路口的行人事故件數；右側是相對安全分數（例如 24% 代表比附近 24% 的區域安全）、
-資料充足度與 A1／A2 事故組成。上方可切換全天／上班／下班／深夜。
+![搜尋「中壢」後的畫面：左側 500 公尺生活圈與每 200m 一格的局部安全百分位，右側安全分數 24% 與 A1／A2 事故組成](docs/demo.jpg)
 
-> 分數是桃園市同類地區之間的相對百分位，**不是官方安全評等**，不能用來預測未來事故，
-> 也不構成不動產或保險決策建議。詳見 [MODEL_CARD.md](MODEL_CARD.md)。
+左側底色為每 200m 一格的局部安全百分位，圓圈數字是該路口的行人事故件數；右側是相對安全分數（例如 24% 代表比附近 24% 的區域安全）、資料充足度與 A1／A2 事故組成。上方可切換全天／上班／下班／深夜。
 
-### 競賽成果與我的貢獻
+> 分數是桃園市同類地區之間的相對百分位，**不是官方安全評等**，不能用來預測未來事故，也不構成不動產或保險決策建議。詳見 [MODEL_CARD.md](MODEL_CARD.md)。
 
-本專案進入 160 組參賽隊伍中的前 10 強。
+## 架構
 
-我在團隊版本中的程式貢獻都在 upstream 的
-[lee851104/life_house PR #3](https://github.com/lee851104/life_house/pull/3)
-「新增兩地比較、分享收藏、評分說明與完整流程測試」（2026-09-04 合併；6 個 commit 中有 4 個由我提交，
-另 2 個是 lee851104 調整資料包下載連結）：
-
-- **地點 A／B 比較與評分說明**：設定、命名、替換兩個地點，並排顯示安全百分位、行人事故、夜間占比與資料充足度；
-  分數卡可展開查看比較對象與計算方式（`src/serving/static/comparison.js`、`src/serving/static/index.html`）。
-- **分享連結與本地收藏**：網址保留座標、名稱與時段，開啟後重新分析；瀏覽器本機收藏最多 20 筆
-  （`src/serving/static/places.js`）。
-- **路口統計修正**：`src/serving/api.py` 新增 `intersection_details`，用完整事故資料計算路口統計，
-  不再被明細查詢的 400 筆上限截斷。
-- **測試與 CI**：Playwright E2E（`tests/e2e/workflow.spec.cjs`）、Node 測試（`tests/test_comparison.cjs`、
-  `tests/test_places.cjs`）、路口統計的 API 測試（`tests/test_walk_only_api.py`）、CI 擴充，以及下載並驗證測試資料包的
-  `scripts/fetch_test_data.py`。
-
-風險模型（`src/models/核心.py`、`src/features/risk.py`、`src/models/建立基準.py`）與資料管線（`src/data/`）
-由組員 lee851104、chenliyu0410 負責，不是我的工作。
-
-影片製作分工：我製作前段 AI 影像並負責成片重新剪輯；後段 AI 影像由組員使用 Claude 生成。
-
-
-
-### 資料概況
-
-資料範圍為桃園市、2021-07-01 至 2026-06-30。下表為 **2026-09-02** 重建的實測值；
-OSM 圖資會更新、2026 年事故屬即時檔會補登，重建的數字會有小幅差異（例如步行路網 ±數 km）。
-
-| 項目 | 數值 |
-|---|---|
-| 事故資料 | 231,449 件（A1 802 / A2 230,647），死亡 828 人、受傷 302,897 人 |
-| 行人事故 | 11,726 件；實際計分 11,711 件（排除國道／高架／隧道 15 件），其中 A1 死亡事故 128 件 |
-| 事故聚合位置 | 29,370 處（25m 網格 → 45m 貪婪聚合） |
-| 步行路網 | 28,719 km |
-| 比較基準 | 市界內 16,313 個取樣格、8 個曝險分層 |
-| 地名搜尋 | 44,385 筆路段／POI／路口，另有 1,055,977 筆門牌 |
-| 啟動載入 | 冷啟約 11 秒、熱啟約 4 秒（一次載入後查詢走記憶體） |
-
-## 2. 快速開始
-
-### 分享地點與收藏地址
-
-分析完成後按「複製分享連結」，網址會包含座標、名稱與所選時段；收件者開啟後，
-會用目前的資料重新分析同一位置。連結不會凍結分數，資料更新後結果可能不同。
-座標參數存於網址的 `#` 片段。分享前可修改地點名稱；複製失敗時會顯示可手動複製的連結。
-`localhost`／`127.0.0.1` 是本機網址，對外分享需使用可連線的部署網址。
-
-「收藏地址」會把名稱、座標和時段存到目前瀏覽器的 localStorage，最多 20 筆。
-再次收藏同一位置會更新名稱與時段。展開收藏清單即可開啟或移除；清除瀏覽器資料會刪除收藏，
-不會同步到其他裝置。網址參數或收藏資料無效時會顯示提示，不會直接套用。
-
-### 完整操作流程測試
-
-需 Python 3.13、uv、Node.js 22 與 pnpm。安裝及執行：
-
-```bash
-uv sync --all-groups
-pnpm install --frozen-lockfile
-pnpm exec playwright install chromium
-uv run python scripts/fetch_test_data.py
-pnpm test
-pnpm test:e2e
-```
-
-Playwright 會在 8010 埠啟動真正的 FastAPI，使用 v1.0.0 資料包（下載後驗證 SHA-256）。
-已有本機資料時會保留並使用它。測試涵蓋「搜尋地址 → 選點 → 切換深夜 → 查看路口 → 返回」，
-以及分享網址還原、收藏保存／還原／移除。測試只隔離外部圖磚並以套件內 Leaflet 取代 CDN，
-不模擬分析或搜尋 API；CI 失敗時會保留 Playwright trace 與截圖。
-
-### 兩個地點比較與評分說明
-
-搜尋或點選第一個位置，分析完成後可自訂名稱並按「設為地點 A」；
-再選另一個位置按「設為地點 B」。下方比較表會並排顯示行人事故、夜間事故件數與占比、
-資料充足度，以及各自在桃園同類路網分層中的安全百分位。可更新、移除地點或返回地圖查看。
-比較地點暫存於本次頁面，重新整理後清空。
-
-上方時段會同時套用兩地；更新期間隱藏舊結果，失敗可個別重試。
-夜間指 18:00–翌日 06:00，僅計入與所選時段重疊的事故，占比以所選時段的行人事故為分母。
-兩地可能屬於不同路網分層，百分位不是兩地風險倍數，也不是安全機率。
-
-展開分數卡的「這個百分位怎麼算？與哪些地方比較？」可查看本次比較格數、路網分層、
-嚴重度與時間權重、小樣本調整、資料充足度門檻和限制。附近百分位和桃園同類地區百分位
-使用不同母體；大型車與夜間指標只呈現實際件數、占比，不再換算成額外安全分數。
-
-建置產物（索引、路網、基準、地名共約 153 MB）**不進版控**，改以
-原始團隊 repo 的 [GitHub Release v1.0.0](https://github.com/lee851104/life_house/releases/tag/v1.0.0) 提供，
-打包成單一 ZIP（壓縮後 71 MB）；本 fork 沒有另外發布 Release。
-所以有兩條路：下載現成產物（數分鐘），或從政府開放資料自行重建（約一小時）。
-
-### 路徑 A：下載建置產物（最快）
-
-1. 到 upstream 的 [Release v1.0.0](https://github.com/lee851104/life_house/releases/tag/v1.0.0) 下載 `lifehouse-data-v1.0.0.zip`，解壓後把裡面
-   5 個檔案全部放進專案根目錄（與 `啟動.bat` 同一層）。
-2. 建立環境：
-
-   ```bash
-   python -m venv .venv
-   .venv/Scripts/python.exe -m pip install -r requirements.txt
-   ```
-
-3. Windows 直接雙擊 `啟動.bat`，服務就緒後會自動開啟 <http://127.0.0.1:8000>。
-   其他平台：
-
-   ```bash
-   .venv/Scripts/python.exe -m uvicorn src.serving.api:app --host 127.0.0.1 --port 8000
-   ```
-
-<details>
-<summary>為什麼是一個 ZIP，而不是五個附件</summary>
-
-GitHub 上傳 Release 附件時會把非 ASCII 檔名整個丟棄——`事故索引.db` 會變成 `default.db`，
-`路網.npz`／`市界.npz`／`基準.npz` 全部變成 `default.npz` 而互相衝突。ZIP 內部的檔名不受
-這層處理，中文檔名得以保留，下載端也只需要抓一個檔案。
-</details>
-
-### 路徑 B：從零重建
-
-需要 Python 3.13 以上。安裝 [uv](https://docs.astral.sh/uv/) 後：
-
-```bash
-make setup      # uv sync --all-groups
-make data       # 下載 A1/A2 並篩出桃園市（下載＋解壓約 1.4 GB）
-make features   # 建立索引、路網、市界、基準、地名
-make test
-make serve
-```
-
-Windows 沒有內建 `make`，改用等價的 `uv run`（順序不可調換，`建立路網.py` 會先下載 PBF
-供後續腳本使用）。一律以 `-m` 模組形式在**專案根目錄**執行，原因見 [src/paths.py](src/paths.py)：
-
-```bash
-uv sync --all-groups
-uv run python -m src.data.下載資料
-uv run python -m src.data.篩選縣市 桃園市
-uv run python -m src.data.建立索引
-uv run python -m src.data.建立路網
-uv run python -m src.data.建立市界
-uv run python -m src.models.建立基準
-uv run python -m src.data.建立地名   # 選配，約 10 分鐘、需約 2 GB 記憶體
-uv run pytest
-uv run uvicorn src.serving.api:app --host 127.0.0.1 --port 8000
-```
-
-不使用 uv 時，把 `uv run python` 換成 `.venv/Scripts/python.exe`，依賴改用
-`pip install -r requirements.txt`。不建立 `地名.db` 仍可在地圖上點選並分析，
-只是無法用文字搜尋地址或地標。
-
-### 建置產物
-
-以下皆不進版控（見 [.gitignore](.gitignore)），由上述腳本產生，或包含在 Release 的 ZIP 中：
-
-| 檔案 | 大小 | 內容 |
-|---|---|---|
-| `事故索引.db` | 72 MB | 逐件事故、聚合位置、R-tree 索引、meta |
-| `路網.npz` | 23 MB | 步行路網（查詢使用）＋機車路網（僅建置保留） |
-| `市界.npz` | 120 KB | 桃園市界多邊形 |
-| `基準.npz` | 86 KB | 曝險分層的風險分布 |
-| `地名.db` | 57 MB | FTS5 地名索引 + 門牌表（選配） |
-
-## 3. 技術與架構
-
-| 技術 | 用途 | 為甚麼選它 |
-|---|---|---|
-| **Python 3.13** | 資料管線與後端 | 管線與查詢共用同一套環境與型別，不必跨語言搬資料。 |
-| **FastAPI + Uvicorn** | 本機 API | 前端與 API 同源（`GET /` 直接回 `index.html`），不必處理 CORS。 |
-| **NumPy + SciPy** | 空間查詢與風險計算 | `cKDTree` 半徑查詢、向量化算距離核與百分位；啟動載入一次後不再碰磁碟。 |
-| **SQLite（內建）** | 事故與地名索引 | 零安裝、單檔可攜。R-tree 免全表掃描；FTS5 + trigram 讓中文子字串搜尋可用。 |
-| **osmium + Shapely + PyProj** | 解析 PBF、市界、投影 | osmium 是唯一能在合理記憶體內串流掃描全台 PBF 的選擇；座標一律轉 EPSG:3826，單位公尺。 |
-| **Leaflet 1.9.4** | 前端地圖 | 單一 `index.html`、**沒有 build step**，改一行存檔重整就看得到。 |
-| **國土測繪中心 WMTS** | 底圖 | 臺灣通用電子地圖的門牌與巷弄細節比國際圖磚完整，且為官方公開服務。 |
-| **uv + pytest + GitHub Actions** | 環境與 CI | `uv.lock` 鎖定可重現環境；每次 push 跑 `uv sync` + `pytest`。 |
-
-> OSM 只用於**路網與地名**（離線 PBF 解析），**底圖不是 OSM**，是國土測繪中心的 WMTS 服務。
-
-```text
-政府資料開放平臺 A1/A2 事故 CSV          OpenStreetMap taiwan-latest.osm.pbf
-              │                                        │
-              ▼                                        │
-      下載資料.py（raw/ → data/）                       │
-              ▼                                        │
-      篩選縣市.py 桃園市（依「發生地點」開頭篩選）        │
-              ▼                                        ▼
-      建立索引.py                    建立路網.py ─── 建立市界.py
-              │                            │              │
-              ▼                            ▼              ▼
-        事故索引.db  72 MB          路網.npz 23 MB   市界.npz 120 KB
-        逐件事故 + R-tree           步行網（查詢用）     桃園多邊形
-              │                            │              │
-              └──────────────┬─────────────┴──────────────┘
-                             ▼
-                     建立基準.py → 基準.npz 86 KB
-                     市界內取樣、8 個曝險分層的風險分布
-                             │
-              建立地名.py → 地名.db 57 MB（選配，文字搜尋）
-                             │
-                             ▼
-        ┌────────────────────────────────────────────┐
-        │  api.py（FastAPI）啟動時一次載入上述全部      │
-        │    核心.py        空間查詢、曝險校正、風險計算 │
-        │    地名查詢.py    FTS5 中文地名排序           │
-        └────────────────────────────────────────────┘
-                             │  同源提供
-                             ▼
-              index.html（Leaflet 單頁，無框架無 build）
+```mermaid
+flowchart TD
+  CSV["政府資料開放平臺<br/>A1／A2 事故 CSV"] --> DL["下載資料.py"] --> FL["篩選縣市.py 桃園市"] --> IDX["建立索引.py"]
+  PBF["OpenStreetMap<br/>taiwan-latest.osm.pbf"] --> NET["建立路網.py"] --> BND["建立市界.py"]
+  IDX --> DB[("事故索引.db<br/>逐件事故＋R-tree")]
+  NET --> NPZ[("路網.npz<br/>步行路網")]
+  BND --> BNPZ[("市界.npz")]
+  DB & NPZ & BNPZ --> BASE["建立基準.py"] --> BASENPZ[("基準.npz<br/>8 個曝險分層")]
+  PBF --> GEO["建立地名.py（選配）"] --> GEODB[("地名.db<br/>FTS5 trigram")]
+  DB & NPZ & BASENPZ & GEODB --> API["api.py（FastAPI）<br/>啟動時一次載入<br/>核心.py：空間查詢、曝險校正<br/>地名查詢.py：中文地名排序"]
+  API -- "同源提供" --> UI["index.html（Leaflet 單頁，無 build）<br/>comparison.js、places.js"]
 ```
 
 | 端點 | 用途 |
@@ -249,198 +43,108 @@ uv run uvicorn src.serving.api:app --host 127.0.0.1 --port 8000
 | `GET /api/v3/intersection` | 單一聚合位置底下的個別事故點 |
 | `GET /api/v3/geocode` | 地址／地標／路口文字搜尋 |
 | `GET /api/v3/meta` | 資料期間與筆數 |
-| `GET /` | `src/serving/static/index.html` |
 
-後端啟動時把事故索引、步行路網與比較基準全部讀進記憶體，之後每次查詢都是 NumPy 陣列運算。
+技術：Python 3.13、FastAPI + Uvicorn、NumPy + SciPy（`cKDTree` 半徑查詢）、SQLite（R-tree、FTS5）、osmium + Shapely + PyProj（座標轉 EPSG:3826）、Leaflet 1.9.4、國土測繪中心 WMTS 底圖、uv + pytest + ruff + Playwright + GitHub Actions。
 
-## 4. 工程細節
+## 技術重點與設計決策
 
-### 4.1 先把「當事人」還原成「事故」
+本專案**不是機器學習模型**，而是以規則與統計（距離核加權、曝險校正、百分位）產生相對風險；沒有使用 LLM。
 
-原始 CSV 一列是一名當事人。`建立索引.py` 以「當事者順位 = 1」的列作為事故層級屬性來 group，
-並在 `篩選縣市.py` 用 `^\d{4}$` 檢查首欄以跳過檔尾註記列。少了任一步，件數就會被高估或混入註記。
+- **先把「當事人」還原成「事故」**：`建立索引.py` 以「當事者順位 = 1」的列作為事故層級屬性來 group，`篩選縣市.py` 以 `^\d{4}$` 檢查首欄跳過檔尾註記列。
+- **曝險校正**：風險 = Σ(行人事故嚴重度 × 時間權重 × K(d)) ÷ Σ(步行路網長度 × K(d))，K(d) 為 500m Epanechnikov 距離核；分子分母用同一個核，得到「每公里有效路網的事故負擔」。再依圈內可步行路網長度切 8 個曝險分層比較，小樣本另有收縮先驗（`walk_shrinkage_km`）。
+- **用市界裁切取樣**：基準若用經緯度矩形取樣，約四分之三的點會落在新北、新竹或海上，被當成零事故而拉低整條分布；因此只在桃園市界內取樣。
+- **參數用量測決定**：5 年窗 vs 2 年窗，零事故格比例 58.9% → 46.3%（25,471 個 200m 有效格，[reports/五年行人事故評估.json](reports/五年行人事故評估.json)）。
+- **自建中文地理編碼**：Google Places 的 ToS 要求顯示在 Google 地圖上、Nominatim 公共服務禁止 autocomplete 類高頻查詢，所以用 SQLite FTS5 trigram 建索引；可搜尋單位選「路段／POI／路口」（44,385 筆），約 105 萬筆門牌另存非 FTS 表精確查詢。
+- **公式只有一份**：風險公式只在 [src/features/risk.py](src/features/risk.py)，查詢、基準與建庫都呼叫它，測試也驗證正式路徑真的呼叫共用函式。
+- **Windows 相容**：libosmium 開不了含中文的路徑，[src/data/osm_path.py](src/data/osm_path.py) 在開檔前接一個純 ASCII 的暫存硬連結；`.bat` 必須是純 ASCII + CRLF，中文訊息改由 [src/serving/launcher.py](src/serving/launcher.py) 印出。
+- **對外展示不開放 0.0.0.0**：線上 Demo 用 [Tailscale Funnel](https://tailscale.com/kb/1223/funnel) 轉發到只綁 `127.0.0.1:8000` 的 uvicorn（`開機自動啟動.bat` 開機後檢查產物、埠與 Tailscale，並分別對本機與公開網址做健檢）。
 
-### 4.2 分數必須經曝險校正，否則沒有鑑別力
+## 成果與數字
 
-```text
-風險 = Σ(行人事故嚴重度 × 時間權重 × K(d)) ÷ Σ(步行路網長度 × K(d))
+**競賽**：本專案（團隊版本）進入 160 組參賽隊伍中的前 10 強。
 
-K(d) = 1 - (d / 500m)²          Epanechnikov 距離核
-嚴重度 = 1 + 4 × 死亡人數        A2 = 1；A1 通常死亡 1 人 → 5
-時間權重 = 1.0, 0.8, 0.6, 0.4, 0.2   依距資料截止日的年數
-分數 = 同曝險層中「比此處更危險」的比例
-```
+資料範圍為桃園市、2021-07-01 至 2026-06-30，下表為 2026-09-02 重建的實測值（OSM 會更新、2026 年事故會補登，重建數字會有小幅差異）：
 
-分子與分母使用**同一個距離核**，得到的是「每公里有效路網的事故負擔」而不是原始件數。
-再依 500m 圈內可步行路網長度切 8 個曝險分層比較，市區與山區才不會被放在同一把尺上。
-小樣本另有收縮先驗（`walk_shrinkage_km`），避免路網極短的格點名次亂跳。
+| 項目 | 數值 |
+|---|---|
+| 事故資料 | 231,449 件（A1 802 / A2 230,647） |
+| 行人事故 | 11,726 件；實際計分 11,711 件（排除國道／高架／隧道 15 件） |
+| 事故聚合位置 | 29,370 處（25m 網格 → 45m 貪婪聚合） |
+| 步行路網 | 28,719 km |
+| 比較基準 | 市界內 16,313 個取樣格、8 個曝險分層 |
+| 地名搜尋 | 44,385 筆路段／POI／路口，另有 1,055,977 筆門牌 |
+| 啟動載入 | 冷啟約 11 秒、熱啟約 4 秒 |
 
-### 4.3 用市界裁切取樣，避免製造出「假的零風險」
+**測試**（2026-10-30 本機執行）：`pytest` 34 passed、`ruff check .` All checks passed、`node --test tests/test_comparison.cjs tests/test_places.cjs` 7 pass。Playwright E2E（`pnpm test:e2e`）需先下載 71 MB 測試資料包，這次未執行；CI 設定見 [.github/workflows/ci.yml](.github/workflows/ci.yml)。
 
-基準若用經緯度 bbox 矩形取樣，約有**四分之三**的點會落在新北、新竹或海上——那裡有 OSM 道路
-卻沒有桃園的事故資料，會被當成零事故的安全地帶，把整條分布往下拉，結果市區隨便一點都變後段班。
-所以 `建立市界.py` 從 PBF 取出桃園市行政邊界（PBF 中 relation 排在 way 之後，需**分兩趟掃描**
-才拿得到成員座標），基準只在市界內取樣。
+## 如何執行
 
-### 4.4 參數是量測出來的，不是猜的
+建置產物（索引、路網、基準、地名共約 153 MB）**不進版控**，由原始團隊 repo 的 [Release v1.0.0](https://github.com/lee851104/life_house/releases/tag/v1.0.0) 以單一 ZIP（71 MB）提供；本 fork 沒有另外發布 Release。
 
-從 2 年窗改成 5 年窗，是因為 2 年資料太稀疏。以 200m 網格（25,471 個有效格）實測：
+**路徑 A：下載建置產物（數分鐘）**
 
-| 指標 | 2 年窗 | 5 年窗 |
-|---|---|---|
-| 零事故格比例 | 58.9% | **46.3%** |
-| ≤2 件的格比例 | 78.2% | **66.5%** |
-| 中位數件數 | 0 | **1** |
+1. 下載 `lifehouse-data-v1.0.0.zip`，把裡面 5 個檔案放進專案根目錄（與 `啟動.bat` 同一層）。
+2. 建立環境並啟動（需 Python 3.13）：
 
-近六成格子是 0 件時，百分位排不出有意義的名次。完整結果在
-[reports/五年行人事故評估.json](reports/五年行人事故評估.json)，重跑需依序執行兩步
-（第二步讀取第一步產生的 `reports/基準_200m_評估.npz`）：
+   ```bash
+   python -m venv .venv
+   .venv/Scripts/python.exe -m pip install -r requirements.txt
+   .venv/Scripts/python.exe -m uvicorn src.serving.api:app --host 127.0.0.1 --port 8000
+   ```
 
-```bash
-.venv/Scripts/python.exe -m src.models.評估步行網格      # → reports/基準_200m_評估.npz
-.venv/Scripts/python.exe -m src.models.評估五年行人事故  # → reports/五年行人事故評估.json
-```
+   Windows 也可以直接雙擊 `啟動.bat`，就緒後會開啟 <http://127.0.0.1:8000>。
 
-### 4.5 路網與座標符合使用情境
-
-走路分析的曝險路網排除 `motorway`（國道）與 `trunk`（多為快速公路）——行人到不了的路，
-不該算進「圈內有多少路可走」，對應的事故也不該計入生活圈。
-
-個別事故點直接使用政府公開、已去識別化資料中的**原始座標**，不另加隨機或固定偏移
-（`jitter_m = 0`）；偏移會讓使用者誤以為事故發生在別的路口。
-
-### 4.6 自建中文地理編碼，而不是接現成服務
-
-- **為甚麼不接**：Google Places Autocomplete 的 ToS 要求結果顯示在 Google 地圖上，本專案用
-  Leaflet；Nominatim 公共服務的政策明文禁止 autocomplete 這類高頻查詢；自架 Nominatim／Photon
-  需要 PostGIS 或 Elasticsearch，對一個單檔 FastAPI 太重。需要的資料本來就在硬碟上。
-- **索引單位選「路段」不選「門牌」**：桃園市界內光 OSM 就有 100 萬個門牌點，全丟進 FTS 會讓索引
-  膨脹數百 MB，且搜「中山路」會被「中山路1號、3號…」淹沒。所以可搜尋的只有路段／POI／路口
-  （44,385 筆），門牌另存在非 FTS 的 `addr` 表，用 (路段, 號) 精確查——這是真實地理編碼器的做法。
-- **中文分詞**：FTS5 預設 tokenizer 不切中文，「中壢環北路」會變成單一 token 而搜不到。改用
-  trigram tokenizer（字元三連組，等同子字串比對）即可，Python 3.13 內建的 SQLite 3.51 已含此
-  tokenizer，無需外掛。
-- **記憶體**：掃 way 需要 `flex_mem` 載入全台節點座標（約 2 GB），門牌改成邊掃邊分批寫入暫存表，
-  記憶體維持平坦。
-
-### 4.7 可重建、可測試
-
-從下載到基準全程腳本化，資料更新後可完整重建。34 個 Python 測試涵蓋風險基本運算、行人與平交道判準、
-API 參數契約，以及一個**防未來資料洩漏**的時間切分測試（`tests/test_no_leakage.py`）。
-
-風險公式只有 [src/features/risk.py](src/features/risk.py) 一份，查詢、基準與建庫都呼叫它，
-測試也刻意驗證「正式路徑真的有呼叫共用函式」而不只驗證函式本身。公式抄成兩份的代價這個專案
-付過：死亡權重從 20 改成 4 時，`核心.py` 那份說明沒跟著改，說明與行為差了 5 倍，全綠的測試
-一個都測不到。
-
-```text
-$ uv run ruff check .
-All checks passed!
-
-$ uv run pytest
-34 passed
-```
-
-<details>
-<summary><strong>4.8 Windows 上踩過的兩個坑</strong></summary>
-
-**libosmium 開不了含中文的路徑。** 本專案的資料夾就叫「LH專案」，`建立路網.py`／`建立市界.py`／
-`建立地名.py` 會全部失敗，訊息只有一句沒有指向性的 `Open failed ... unknown error`，很容易誤判
-成 PBF 下載壞掉而一直重下（檔案其實是好的）。[src/data/osm_path.py](src/data/osm_path.py) 會在
-開檔前把 PBF 接到一個純 ASCII 的暫存硬連結（同磁碟區，不佔空間），所以不需要把專案搬家。
-
-**.bat 必須是純 ASCII 且 CRLF。** cmd.exe 以主控台字碼頁（繁中 Windows 為 950／Big5）逐位元組
-解讀批次檔，註解裡只要出現一個 UTF-8 中文字就會讓解析器錯位，連 `rem` 都不再被認得，畫面上會
-冒出看不出原因的「不是內部或外部命令」訊息。所以 `啟動.bat` 與 `開機自動啟動.bat` 都只是薄殼，
-中文訊息全部由 [src/serving/launcher.py](src/serving/launcher.py) 印出；
-[.gitattributes](.gitattributes) 也把 `*.bat`／`*.cmd` 釘為 `eol=crlf`，避免 clone 時被全域的
-`eol=lf` 改回去而再次失效。
-</details>
-
-## 5. 線上 Demo 的部署方式
-
-線上 Demo 沒有另建雲端環境，就是「路徑 A／B」跑起來的同一個本機服務，透過
-[Tailscale Funnel](https://tailscale.com/kb/1223/funnel) 對外提供：
-
-```text
-瀏覽器 ──HTTPS──> Tailscale Funnel ──> 127.0.0.1:8000（uvicorn）
-```
-
-重點是 **uvicorn 仍然只綁 `127.0.0.1`**。Funnel 從本機環回介面取用服務，區網上的其他裝置一樣連不到
-——不必為了對外展示，把一個沒有認證的 API 綁到 `0.0.0.0`（理由見 [Makefile](Makefile) 末尾註解）。
+**路徑 B：從政府開放資料重建（約一小時）**，需要 [uv](https://docs.astral.sh/uv/)，一律在專案根目錄以 `-m` 模組形式執行（原因見 [src/paths.py](src/paths.py)）：
 
 ```bash
-winget install Tailscale.Tailscale
-tailscale login
-tailscale funnel --bg 8000
+uv sync --all-groups
+uv run python -m src.data.下載資料
+uv run python -m src.data.篩選縣市 桃園市
+uv run python -m src.data.建立索引
+uv run python -m src.data.建立路網      # 會先下載 PBF，順序不可調換
+uv run python -m src.data.建立市界
+uv run python -m src.models.建立基準
+uv run python -m src.data.建立地名      # 選配，約 10 分鐘、需約 2 GB 記憶體
+uv run uvicorn src.serving.api:app --host 127.0.0.1 --port 8000
 ```
 
-首次啟用 Funnel 需要在 Tailscale 管理主控台按同意，CLI 會直接印出該連結。
+有 `make` 的環境可用 `make setup / data / features / test / serve`。
 
-開機後由啟動資料夾的捷徑執行 [開機自動啟動.bat](開機自動啟動.bat)，**在一個看得見的視窗裡**
-把服務帶起來：依序檢查建置產物、8000 埠、Tailscale，順手重新發布一次 Funnel（刻意的冗餘，
-避免 serve 設定沒撐過重開機），就緒後分別對本機與公開網址各打一次健檢——只有本機 200、
-公開連不上，問題就在 Funnel 而不在服務本身，省掉一輪瞎猜。公開網址取自
-`tailscale status --json`，沒有寫死；視窗訊息同時寫進 `logs/serve.log`。
+**測試**：
 
-安裝時請**放捷徑，不要放副本**（`Win+R` → `shell:startup`）：腳本用 `%~dp0` 定位專案，
-複製一份過去會讓它在啟動資料夾裡找 `.venv` 而失敗。代價是啟動資料夾只在**登入後**執行，
-展示機停在鎖定畫面時公開網址就是死的。
-
-> **已知限制**：服務公開後隨即會收到網際網路的例行漏洞掃描（`/v2/_catalog`、`/login.action`
-> 之類），這些路徑不存在，一律回 404；但 `POST /api/v3/analyze` 是公開且運算密集的端點，
-> 本專案未實作速率限制，不適合長期公開曝露。
-
-## 6. 限制與資料來源
-
-- 來源為 [政府資料開放平臺](https://data.gov.tw/)，提供機關內政部警政署。**A1** 為當場或 24 小時
-  內死亡的事故；**A2** 為受傷或超過 24 小時死亡的事故。
-- 2026 年屬當年度即時檔，會隨時間往後補登，**不可直接與完整年度比較**。
-- 事故資料未含車流、人流與道路設計等曝險因子。密度偏低可能只反映使用量低，不等於絕對安全。
-- 目前僅支援桃園市。市界邊緣仍會受界外路網與事故資料截斷影響。
-- OSM 標註可能遺漏新路或步行路網資訊。
-
-延伸閱讀：[MODEL_CARD.md](MODEL_CARD.md)（用途、限制、已知偏誤、不適用情境、隱私）、
-[configs/analysis.yaml](configs/analysis.yaml)（所有可調參數，程式中不硬編碼）。
-
-## 7. 專案結構
-
-依可重現 ML 專案的標準骨架擺放：設定與程式碼分離、特徵工程是可測試的純函式、
-訓練（建基準）與推論（計分）同一份數學、服務層只有 FastAPI。
-
-```text
-life_house/
-├── configs/analysis.yaml   所有可調參數（半徑、網格、權重、分層、收縮先驗）
-├── src/
-│   ├── paths.py            專案根目錄的單一定義（建置產物都放根目錄）
-│   ├── data/               下載資料、篩選縣市、建立索引／路網／市界／地名
-│   │                       + osm_path.py（繞過中文路徑）、validation.py（防洩漏切分）
-│   ├── features/           純函式：risk.py（距離核、嚴重度、判準）、地名正規化.py
-│   ├── models/             建立基準、核心.py（計分）、地名查詢、兩支評估腳本
-│   └── serving/            api.py、launcher.py（.bat 的進入點）、static/index.html
-├── tests/                  pytest 29 項，含 test_no_leakage.py
-├── reports/                評估結果、年度彙總、資料清單、圖表
-├── notebooks/              EDA 專用，不放訓練邏輯
-├── Makefile                setup / data / features / train / eval / serve
-├── 啟動.bat                雙擊啟動
-├── 開機自動啟動.bat        登入時在可見視窗帶起線上 Demo
-└── .github/workflows/ci.yml
+```bash
+uv run pytest
+uv run ruff check .
+pnpm install --frozen-lockfile && pnpm test
+# E2E：先下載並驗證測試資料包，Playwright 會在 8010 埠啟動真正的 FastAPI
+pnpm exec playwright install chromium
+uv run python scripts/fetch_test_data.py
+pnpm test:e2e
 ```
 
-> 建置腳本一律以模組形式、在**專案根目錄**執行：`python -m src.data.建立索引`。
-> 直接跑 `python src/data/建立索引.py` 會失敗——`sys.path[0]` 會變成 `src/data`，
-> `import src.paths` 找不到。理由見 [src/paths.py](src/paths.py)。
+## 已知限制與下一步
 
-## 8. 授權
+- 歷史事故不預測未來；事故資料未含車流、人流與道路設計等曝險因子，密度偏低可能只反映使用量低。
+- 2026 年屬當年度即時檔，會隨時間補登，不可直接與完整年度比較。
+- 目前僅支援桃園市；市界邊緣仍會受界外路網與事故資料截斷影響。
+- `POST /api/v3/analyze` 公開且運算密集，未實作速率限制，不適合長期公開曝露；展示機只在登入後啟動服務，鎖定畫面時公開網址無法使用。
+- 分享連結不凍結分數，資料更新後結果可能不同；收藏只存在目前瀏覽器的 localStorage（最多 20 筆），不會同步。
 
-**程式碼**依 [MIT License](LICENSE) 授權。第三方資料與圖資各自沿用原授權，不因此改變：
+## 我負責的部分
 
-| 對象 | 授權 | 說明 |
-|---|---|---|
-| 本專案原始碼 | [MIT](LICENSE) | 保留著作權聲明即可自由使用、修改與散布。 |
-| 交通事故資料 A1／A2 | [政府資料開放授權條款－第 1 版](https://data.gov.tw/licenses) | 提供機關：內政部警政署。再利用請依該條款標示來源。 |
-| 路網與地名（OSM） | [ODbL 1.0](https://www.openstreetmap.org/copyright) | 散布衍生資料庫須遵循相同方式分享（share-alike）義務。 |
-| 地圖底圖 | [內政部國土測繪中心](https://maps.nlsc.gov.tw/) | 臺灣通用電子地圖／正射影像 WMTS，依該中心服務條款使用。 |
-| Leaflet 1.9.4 | BSD 2-Clause | 前端地圖套件，自 CDN 載入。 |
+這是團隊競賽專案。**風險模型**（`src/models/核心.py`、`src/features/risk.py`、`src/models/建立基準.py`）與**資料管線**（`src/data/`）由組員 lee851104、chenliyu0410 負責，不是我的工作。
 
-各項授權的完整說明與免責聲明見 [LICENSE](LICENSE) 檔案末段。
+我的程式貢獻都在 upstream 的 [lee851104/life_house PR #3](https://github.com/lee851104/life_house/pull/3)「新增兩地比較、分享收藏、評分說明與完整流程測試」（2026-09-04 合併；6 個 commit 中 4 個由我提交，另 2 個是 lee851104 調整資料包下載連結）：
+
+- **地點 A／B 比較與評分說明**：設定、命名、替換兩個地點，並排顯示安全百分位、行人事故、夜間占比與資料充足度；分數卡可展開查看比較對象與計算方式（`src/serving/static/comparison.js`、`src/serving/static/index.html`）。
+- **分享連結與本地收藏**：網址 `#` 片段保留座標、名稱與時段，開啟後重新分析；瀏覽器本機收藏最多 20 筆（`src/serving/static/places.js`）。
+- **路口統計修正**：`src/serving/api.py` 新增 `intersection_details`，用完整事故資料計算路口統計，不再被明細查詢的 400 筆上限截斷。
+- **測試與 CI**：Playwright E2E（`tests/e2e/workflow.spec.cjs`，涵蓋「搜尋地址 → 選點 → 切換深夜 → 查看路口 → 返回」與分享、收藏流程）、Node 測試（`tests/test_comparison.cjs`、`tests/test_places.cjs`）、路口統計的 API 測試（`tests/test_walk_only_api.py`）、CI 擴充，以及下載並驗證 SHA-256 的測試資料包腳本 `scripts/fetch_test_data.py`。
+
+影片製作：我製作前段 AI 影像並負責成片重新剪輯；後段 AI 影像由組員使用 Claude 生成。
+
+## 資料來源與授權
+
+- 事故資料：[政府資料開放平臺](https://data.gov.tw/)，提供機關內政部警政署。A1 為當場或 24 小時內死亡的事故；A2 為受傷或超過 24 小時死亡的事故。
+- 路網與地名：© OpenStreetMap 貢獻者；底圖：國土測繪中心臺灣通用電子地圖 WMTS。
+- 程式碼授權見 [LICENSE](LICENSE)。

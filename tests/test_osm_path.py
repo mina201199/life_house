@@ -11,7 +11,7 @@ from src.data.osm_path import _is_ascii, readable_osm_path
 
 def test_ascii_detection():
     assert _is_ascii(r"C:\lifehouse\raw\taiwan.osm.pbf")
-    assert not _is_ascii(r"C:\Users\User\Desktop\LH專案\raw\taiwan.osm.pbf")
+    assert not _is_ascii(r"C:\projects\LH專案\raw\taiwan.osm.pbf")
 
 
 def test_ascii_path_is_returned_unchanged(tmp_path):
